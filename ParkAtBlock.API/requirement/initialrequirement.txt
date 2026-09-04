@@ -1,0 +1,503 @@
+Build an ASP.NET Core backend for a real-time smart parking monitoring system.
+
+PROJECT GOAL
+---------------
+An ESP32 device is connected to an HC-SR04 ultrasonic distance sensor.
+
+The ESP32 monitors a parking slot.
+
+Current logic:
+- If distance < 50 cm → vehicle/car is considered PARKED/OCCUPIED.
+- If distance >= 50 cm → parking slot is considered AVAILABLE.
+- The ESP32 currently has a red LED that turns ON when a vehicle is detected.
+
+The ESP32 will communicate with the ASP.NET Core server over Wi-Fi.
+
+The server must provide:
+1. REST API for receiving parking sensor events from ESP32.
+2. SignalR for real-time updates to web clients.
+3. In-memory storage for current parking state.
+4. No SQL Server/database for the first version.
+5. Clean architecture so SQL Server can be added later without major changes.
+
+TECHNOLOGY
+---------------
+- ASP.NET Core Web API
+- C#
+- .NET 8 or newer LTS version
+- SignalR
+- REST API
+- In-memory state storage
+- Swagger/OpenAPI
+- Dependency Injection
+- Async/await
+- Nullable reference types enabled
+
+Do NOT add Entity Framework or SQL Server yet.
+
+CORE DOMAIN
+---------------
+
+A parking slot should have:
+
+- SlotId
+- DeviceId
+- DistanceCm
+- IsOccupied
+- LastUpdatedUtc
+- LastSeenUtc
+- DeviceStatus
+
+Example:
+
+{
+    "slotId": 1,
+    "deviceId": "ESP32-001",
+    "distanceCm": 32.5,
+    "isOccupied": true,
+    "lastUpdatedUtc": "2026-09-03T16:00:00Z",
+    "lastSeenUtc": "2026-09-03T16:00:00Z",
+    "deviceStatus": "Online"
+}
+
+The server should determine IsOccupied based on distance rather than trusting the ESP32's occupied value.
+
+Default threshold:
+
+50 cm
+
+Make the threshold configurable so it can be changed later without changing the API contract.
+
+For example:
+
+ParkingSettings:
+- OccupiedDistanceThresholdCm = 50
+
+DEVICE EVENT API
+---------------
+
+Create:
+
+POST /api/parking/events
+
+The ESP32 sends:
+
+{
+    "deviceId": "ESP32-001",
+    "slotId": 1,
+    "distanceCm": 32.5
+}
+
+The server should:
+
+1. Validate the request.
+2. Validate DeviceId.
+3. Validate SlotId.
+4. Validate distance.
+5. Update the current state of that parking slot.
+6. Determine IsOccupied using the configured threshold.
+7. Update LastUpdatedUtc and LastSeenUtc.
+8. Mark the device Online.
+9. Broadcast the updated parking slot through SignalR.
+10. Return HTTP 200/202 with the updated state.
+
+Do not broadcast an event if the parking state has not changed unless there is a specific reason to do so.
+
+CURRENT STATUS API
+---------------
+
+Create:
+
+GET /api/parking/slots
+
+Return all known parking slots.
+
+Example:
+
+[
+    {
+        "slotId": 1,
+        "deviceId": "ESP32-001",
+        "distanceCm": 32.5,
+        "isOccupied": true,
+        "lastUpdatedUtc": "...",
+        "lastSeenUtc": "...",
+        "deviceStatus": "Online"
+    }
+]
+
+Also create:
+
+GET /api/parking/slots/{slotId}
+
+Return the current state of one slot.
+
+Return 404 if the slot does not exist.
+
+DEVICE STATUS
+---------------
+
+A device should have:
+
+- Online
+- Offline
+
+The server should track LastSeenUtc.
+
+Design the code so an ESP32 that stops sending events can eventually be marked Offline.
+
+Do not require a separate heartbeat endpoint initially unless you believe it is necessary.
+
+Provide a clean mechanism/service for determining whether a device is offline.
+
+SIGNALR
+---------------
+
+Create a SignalR hub:
+
+/hubs/parking
+
+Create:
+
+ParkingHub : Hub
+
+When a parking state changes, broadcast:
+
+Event name:
+
+ParkingSlotUpdated
+
+Payload:
+
+{
+    "slotId": 1,
+    "deviceId": "ESP32-001",
+    "distanceCm": 32.5,
+    "isOccupied": true,
+    "lastUpdatedUtc": "...",
+    "lastSeenUtc": "...",
+    "deviceStatus": "Online"
+}
+
+Use:
+
+IHubContext<ParkingHub>
+
+from the application/service layer rather than putting business logic inside the Hub.
+
+Also provide a mechanism for a newly connected dashboard client to retrieve the current state using the REST API.
+
+ARCHITECTURE
+---------------
+
+Use a clean and maintainable structure.
+
+Suggested:
+
+/Controllers
+    ParkingController.cs
+
+/Hubs
+    ParkingHub.cs
+
+/Models
+    ParkingEventRequest.cs
+    ParkingSlotState.cs
+
+/Services
+    IParkingService.cs
+    ParkingService.cs
+
+/Configuration
+    ParkingSettings.cs
+
+/Repositories
+    IParkingStateRepository.cs
+    InMemoryParkingStateRepository.cs
+
+Do not over-engineer the project.
+
+The repository abstraction is useful because the application should be able to replace in-memory storage with SQL Server later.
+
+The application/service layer should contain the parking business logic.
+
+The controller should remain thin.
+
+BUSINESS RULES
+---------------
+
+1. distance < 50 cm → occupied
+2. distance >= 50 cm → available
+
+Make 50 cm configurable.
+
+The server should determine occupancy.
+
+Example:
+
+distance = 32
+→ IsOccupied = true
+
+distance = 75
+→ IsOccupied = false
+
+Avoid unnecessary event broadcasting.
+
+If:
+
+previous state = occupied
+new state = occupied
+
+do not send ParkingSlotUpdated unless there is a meaningful state update requirement.
+
+If:
+
+previous state = occupied
+new state = available
+
+broadcast ParkingSlotUpdated.
+
+If:
+
+previous state = available
+new state = occupied
+
+broadcast ParkingSlotUpdated.
+
+SENSOR NOISE
+---------------
+
+Design the service so sensor readings can later support debouncing/hysteresis.
+
+For the first version, keep the logic simple.
+
+However, structure the code so that later we can implement:
+
+- multiple consecutive readings
+- configurable occupied threshold
+- configurable available threshold
+- state stabilization
+
+Do not implement complicated sensor filtering unless necessary for the first version.
+
+CONCURRENCY
+---------------
+
+Multiple ESP32 devices may send requests simultaneously.
+
+The in-memory parking state must be thread-safe.
+
+Use appropriate synchronization or a concurrent collection.
+
+Do not use a normal Dictionary without considering concurrent access.
+
+CORS
+---------------
+
+Configure CORS so a web dashboard hosted separately can connect to:
+
+- REST API
+- SignalR
+
+Do not use unsafe wildcard configuration with AllowCredentials in production.
+
+For development, make the allowed origins configurable through configuration/appsettings.
+
+CONFIGURATION
+---------------
+
+Use appsettings.json for:
+
+- OccupiedDistanceThresholdCm
+- DeviceOfflineTimeoutSeconds
+- AllowedOrigins
+
+Example:
+
+"ParkingSettings": {
+    "OccupiedDistanceThresholdCm": 50,
+    "DeviceOfflineTimeoutSeconds": 30
+}
+
+Do not hard-code these values inside business logic.
+
+VALIDATION
+---------------
+
+Validate:
+
+DeviceId:
+- required
+- reasonable maximum length
+
+SlotId:
+- must be greater than 0
+
+DistanceCm:
+- must be >= 0
+- protect against obviously invalid values
+
+Return proper HTTP status codes and useful error messages.
+
+HEALTH CHECK
+---------------
+
+Add:
+
+GET /health
+
+It should return a simple healthy response.
+
+Also expose useful application/device status if appropriate.
+
+LOGGING
+---------------
+
+Use ILogger<T>.
+
+Log:
+
+- device event received
+- parking state changes
+- invalid requests
+- device going offline
+- important SignalR errors
+
+Do not log excessively on every sensor reading if the ESP32 sends frequent measurements.
+
+SWAGGER
+---------------
+
+Enable Swagger/OpenAPI in development.
+
+Document the main endpoints:
+
+POST /api/parking/events
+
+GET /api/parking/slots
+
+GET /api/parking/slots/{slotId}
+
+GET /health
+
+Also document the SignalR hub:
+
+/hubs/parking
+
+TESTING
+---------------
+
+Create unit tests for the parking business logic.
+
+Test:
+
+1. distance 30 → occupied
+2. distance 49.9 → occupied
+3. distance 50 → available
+4. distance 75 → available
+5. state change available → occupied
+6. state change occupied → available
+7. invalid SlotId
+8. invalid DeviceId
+9. invalid distance
+10. multiple slots
+11. multiple devices
+12. concurrent updates
+
+Create integration tests for:
+
+POST /api/parking/events
+
+GET /api/parking/slots
+
+GET /api/parking/slots/{slotId}
+
+EXPECTED REQUEST
+---------------
+
+Example:
+
+POST /api/parking/events
+
+{
+    "deviceId": "ESP32-001",
+    "slotId": 1,
+    "distanceCm": 32.5
+}
+
+EXPECTED RESPONSE:
+
+{
+    "slotId": 1,
+    "deviceId": "ESP32-001",
+    "distanceCm": 32.5,
+    "isOccupied": true,
+    "lastUpdatedUtc": "...",
+    "lastSeenUtc": "...",
+    "deviceStatus": "Online"
+}
+
+FUTURE EXTENSIBILITY
+---------------
+
+Design this so the following can be added later without rewriting the core system:
+
+1. SQL Server for parking history
+2. Multiple parking lots
+3. Multiple slots
+4. Authentication for ESP32 devices
+5. Device registration
+6. Parking history
+7. Parking duration calculation
+8. Dashboard
+9. Alerts
+10. MQTT instead of HTTP
+11. Offline device monitoring
+12. User authentication
+13. Admin management of parking slots
+
+IMPORTANT
+---------------
+
+Do not implement SQL Server now.
+
+Do not create unnecessary CRUD endpoints.
+
+Do not store every sensor reading.
+
+The primary purpose of this backend is real-time parking state.
+
+Keep the code production-quality but simple.
+
+After implementation, provide:
+
+1. Complete project structure
+2. All source files
+3. Required NuGet packages
+4. appsettings.json
+5. Example curl commands for testing
+6. Instructions to run the API
+7. SignalR connection details
+8. Explanation of how the ESP32 should communicate with the API
+9. Unit/integration tests
+10. Example JSON requests and responses
+
+The final architecture should be:
+
+ESP32 + HC-SR04
+        |
+        | HTTP POST
+        v
+ASP.NET Core Web API
+        |
+        v
+Parking Service
+        |
+        +----> In-Memory Current State
+        |
+        +----> SignalR
+                   |
+                   v
+             Web Dashboard
+
+Do not add SQL Server until the real-time version is working.

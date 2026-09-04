@@ -1,0 +1,1010 @@
+Build a modern, production-quality responsive web application for a Smart Parking Management System.
+
+The application will primarily be used on mobile phones, but it must also work well on desktop browsers.
+
+The same web application must be capable of being packaged into:
+- Android
+- iOS
+
+Use Capacitor for mobile packaging rather than creating separate Android and iOS implementations.
+
+TECH STACK
+----------
+
+Frontend:
+- React
+- TypeScript
+- Vite
+- React Router
+- SignalR JavaScript client
+- Axios or native fetch for REST API calls
+- Modern CSS or Tailwind CSS
+- Capacitor for Android/iOS packaging
+
+Backend:
+- Existing ASP.NET Core Web API
+- Existing ASP.NET Core SignalR Hub
+
+Do NOT create a new backend.
+Do NOT implement mock backend APIs once the API integration is defined.
+The frontend must be designed to consume the existing ASP.NET Core API.
+
+The backend currently exposes:
+
+POST /api/parking/events
+
+GET /api/parking/slots
+
+GET /api/parking/slots/{slotId}
+
+SignalR:
+
+/hubs/parking
+
+SignalR event:
+
+ParkingSlotUpdated
+
+
+APPLICATION PURPOSE
+-------------------
+
+This is a parking management application that displays the real-time availability of parking slots.
+
+ESP32 devices are connected to HC-SR04 ultrasonic sensors.
+
+Each ESP32 represents a parking slot.
+
+The ESP32 sends measured distance to the ASP.NET Core API.
+
+The backend determines:
+
+distance < 50 cm
+    => occupied
+
+distance >= 50 cm
+    => available
+
+The backend then sends parking state changes to connected clients through SignalR.
+
+The frontend must display these changes in real time without requiring page refreshes.
+
+
+IMPORTANT ARCHITECTURE
+----------------------
+
+The frontend must use two communication mechanisms:
+
+1. REST API
+   Used for:
+   - Initial loading of parking state
+   - Getting individual slot details
+   - Future management operations
+
+2. SignalR
+   Used for:
+   - Real-time parking status changes
+   - Receiving ParkingSlotUpdated events
+
+On application startup:
+
+1. Connect to the REST API.
+2. Call GET /api/parking/slots.
+3. Populate the initial parking state.
+4. Establish a SignalR connection to /hubs/parking.
+5. Subscribe to ParkingSlotUpdated.
+6. Update the UI immediately when an event arrives.
+
+Do not continuously poll the API for parking status.
+
+SignalR should be the primary mechanism for real-time updates.
+
+
+DESIGN GOAL
+-----------
+
+The application should feel like a modern parking management/mobile dashboard.
+
+Prioritize:
+- Very clear parking availability
+- Large touch-friendly UI
+- Fast status recognition
+- Real-time updates
+- Mobile-first design
+- Clean professional appearance
+- Minimal unnecessary complexity
+
+
+MAIN SCREEN
+-----------
+
+Create a Dashboard screen.
+
+Example:
+
+--------------------------------
+        SMART PARKING
+--------------------------------
+
+  Available: 12       Occupied: 8
+
+--------------------------------
+
+Parking Slots
+
+┌──────────────────────────────┐
+│ Slot 01                      │
+│                              │
+│ 🟢 AVAILABLE                 │
+│                              │
+│ Distance: 126 cm             │
+│ ESP32-001                    │
+│                              │
+│ Updated: Just now            │
+└──────────────────────────────┘
+
+┌──────────────────────────────┐
+│ Slot 02                      │
+│                              │
+│ 🔴 OCCUPIED                  │
+│                              │
+│ Distance: 34 cm              │
+│ ESP32-002                    │
+│                              │
+│ Updated: Just now            │
+└──────────────────────────────┘
+
+The actual UI should be more polished than this text representation.
+
+
+PARKING SLOT CARD
+-----------------
+
+Each slot should display:
+
+- Slot number
+- Available / Occupied state
+- Distance in cm
+- Device ID
+- Last updated time
+- Device online/offline status
+
+Clearly distinguish:
+
+AVAILABLE
+OCCUPIED
+OFFLINE
+UNKNOWN
+
+Do not rely only on color.
+
+Use:
+- Status text
+- Icons
+- Appropriate visual indicators
+
+This ensures accessibility for users who cannot distinguish colors easily.
+
+
+SUMMARY SECTION
+---------------
+
+At the top of the dashboard show:
+
+Total Slots
+Available
+Occupied
+Offline
+
+Example:
+
+Total
+20
+
+Available
+12
+
+Occupied
+7
+
+Offline
+1
+
+
+REAL-TIME BEHAVIOR
+------------------
+
+When the server sends:
+
+ParkingSlotUpdated
+
+the corresponding slot card must update immediately.
+
+Example:
+
+Initial:
+
+Slot 1
+🟢 AVAILABLE
+Distance: 120 cm
+
+ESP32 detects a vehicle.
+
+Server sends:
+
+{
+    "slotId": 1,
+    "deviceId": "ESP32-001",
+    "distanceCm": 32.5,
+    "isOccupied": true,
+    "lastUpdatedUtc": "...",
+    "lastSeenUtc": "...",
+    "deviceStatus": "Online"
+}
+
+The UI should immediately become:
+
+Slot 1
+🔴 OCCUPIED
+Distance: 32.5 cm
+
+Do not reload the page.
+
+
+SIGNALR CONNECTION STATUS
+-------------------------
+
+Display the connection state somewhere unobtrusively.
+
+Possible states:
+
+Connected
+Reconnecting
+Disconnected
+
+Example:
+
+● Live
+
+or:
+
+⚠ Reconnecting...
+
+
+If SignalR disconnects:
+
+- Automatically attempt reconnection.
+- Do not crash the application.
+- Show a subtle connection warning.
+- Continue displaying the last known parking state.
+
+When SignalR reconnects:
+
+- Re-fetch GET /api/parking/slots to synchronize the current state.
+- Then continue receiving live events.
+
+
+OFFLINE DEVICE HANDLING
+-----------------------
+
+The backend provides:
+
+deviceStatus
+
+Possible values:
+
+Online
+Offline
+
+Show offline devices clearly.
+
+Example:
+
+Slot 05
+⚠ SENSOR OFFLINE
+
+Do not incorrectly show an offline slot as Available.
+
+Treat offline/unknown as a separate state.
+
+
+FILTERING
+---------
+
+Add simple filters:
+
+All
+Available
+Occupied
+Offline
+
+Example:
+
+[ All ] [ Available ] [ Occupied ] [ Offline ]
+
+The filtering must happen client-side based on the currently loaded state.
+
+
+SEARCH
+------
+
+Provide a search field for larger parking installations.
+
+Allow searching by:
+
+- Slot ID
+- Device ID
+
+Example:
+
+Search parking slot...
+
+
+SORTING
+-------
+
+Allow sorting by:
+
+- Slot number
+- Available first
+- Occupied first
+- Offline first
+
+Keep the default sorting by slot number.
+
+
+SLOT DETAILS
+------------
+
+Clicking/tapping a parking slot should open a details screen/modal.
+
+Show:
+
+Slot ID
+Device ID
+Current status
+Current distance
+Device status
+Last seen
+Last updated
+
+Example:
+
+Parking Slot 01
+
+Status
+OCCUPIED
+
+Distance
+32.5 cm
+
+Device
+ESP32-001
+
+Device Status
+ONLINE
+
+Last Seen
+10 seconds ago
+
+Last Updated
+5 seconds ago
+
+
+NAVIGATION
+----------
+
+Use React Router.
+
+Create:
+
+/dashboard
+
+/parking/:slotId
+
+/settings
+
+The dashboard should be the default route.
+
+
+MOBILE UX
+---------
+
+The application must be designed mobile-first.
+
+On mobile:
+
+- Use a single-column slot layout.
+- Cards should be easy to tap.
+- Buttons should be touch-friendly.
+- Avoid tiny text.
+- Avoid hover-dependent interactions.
+- Use responsive navigation.
+
+On tablets:
+
+Use 2-column layout where appropriate.
+
+On desktop:
+
+Use 3 or 4-column slot grid depending on screen width.
+
+
+BOTTOM NAVIGATION
+-----------------
+
+For mobile, use a bottom navigation bar:
+
+Dashboard
+Parking
+Settings
+
+Keep it simple.
+
+The Dashboard should show the main parking overview.
+
+
+DESKTOP NAVIGATION
+------------------
+
+For desktop, use a sidebar or top navigation.
+
+Do not force desktop users to use mobile-style navigation if a sidebar provides a better UX.
+
+
+THEME
+-----
+
+Create a professional modern UI suitable for a parking management product.
+
+Use:
+- clean cards
+- rounded corners
+- clear typography
+- subtle shadows
+- good spacing
+- responsive layout
+
+Support:
+- Light mode
+- Dark mode
+
+Remember the user's theme preference locally.
+
+
+ACCESSIBILITY
+-------------
+
+Follow accessibility best practices.
+
+Ensure:
+- Keyboard navigation
+- Proper semantic HTML
+- ARIA labels where needed
+- Sufficient contrast
+- Status is communicated through text/icons as well as color
+- Touch targets are sufficiently large
+
+
+API CONFIGURATION
+-----------------
+
+Do not hard-code the backend URL.
+
+Create environment configuration.
+
+Example:
+
+VITE_API_BASE_URL=http://localhost:5000
+
+The SignalR URL should be derived from the API base URL.
+
+For example:
+
+API:
+http://localhost:5000
+
+SignalR:
+http://localhost:5000/hubs/parking
+
+
+For production:
+
+VITE_API_BASE_URL=https://api.example.com
+
+SignalR:
+
+https://api.example.com/hubs/parking
+
+
+Create:
+
+.env.development
+
+.env.production
+
+Do not commit secrets.
+
+
+API SERVICE
+-----------
+
+Create a centralized API service.
+
+For example:
+
+src/services/parkingApi.ts
+
+Functions:
+
+getParkingSlots()
+
+getParkingSlot(slotId)
+
+Do not put fetch/axios calls directly inside UI components.
+
+
+SIGNALR SERVICE
+---------------
+
+Create:
+
+src/services/signalRService.ts
+
+Responsibilities:
+
+- Create HubConnection
+- Connect to /hubs/parking
+- Subscribe to ParkingSlotUpdated
+- Handle reconnecting
+- Handle reconnected
+- Handle closed
+- Expose clean callbacks/events to React
+
+Do not put SignalR implementation directly into individual UI components.
+
+
+STATE MANAGEMENT
+----------------
+
+Do not introduce Redux unless genuinely necessary.
+
+For this application, use:
+
+- React Context
+or
+- a lightweight state-management solution
+
+Create a centralized ParkingState.
+
+It should contain:
+
+slots
+connectionStatus
+loading
+error
+
+Provide operations such as:
+
+loadSlots()
+updateSlot()
+setConnectionStatus()
+
+
+REAL-TIME STATE FLOW
+--------------------
+
+Implement this flow:
+
+Application starts
+        ↓
+GET /api/parking/slots
+        ↓
+Populate state
+        ↓
+Connect SignalR
+        ↓
+Listen for ParkingSlotUpdated
+        ↓
+Receive event
+        ↓
+Update corresponding slot
+        ↓
+React UI re-renders
+
+
+If SignalR reconnects:
+
+SignalR reconnects
+        ↓
+GET /api/parking/slots
+        ↓
+Synchronize state
+        ↓
+Continue listening
+
+
+ERROR HANDLING
+--------------
+
+Handle:
+
+- API unavailable
+- Network unavailable
+- SignalR unavailable
+- Invalid API response
+- 404 slot
+- Connection lost
+- Reconnection
+
+Provide user-friendly messages.
+
+Do not expose raw exception messages to users.
+
+
+LOADING STATES
+--------------
+
+Provide good loading UI.
+
+Initial load:
+
+Skeleton cards or loading indicator.
+
+Avoid showing an empty dashboard while the API is loading.
+
+
+EMPTY STATE
+-----------
+
+If there are no parking slots:
+
+Show:
+
+No parking slots available.
+
+Do not show a blank screen.
+
+
+SECURITY
+--------
+
+Do not store sensitive credentials in frontend source code.
+
+Assume authentication may be added later.
+
+Structure the API client so authentication headers/token handling can be added later without rewriting the application.
+
+
+CAPACITOR
+---------
+
+Configure Capacitor.
+
+The application must be buildable as:
+
+Web application
+Android application
+iOS application
+
+Use:
+
+@capacitor/core
+@capacitor/cli
+@capacitor/android
+@capacitor/ios
+
+Provide scripts such as:
+
+npm run dev
+
+npm run build
+
+npm run cap:sync
+
+npm run android
+
+npm run ios
+
+
+The application must continue to work as a normal web application.
+
+Do not add unnecessary native plugins.
+
+
+ANDROID AND IOS
+---------------
+
+Provide the setup required to generate:
+
+Android Studio project
+
+Xcode project
+
+Document:
+
+1. npm install
+2. npm run build
+3. npx cap add android
+4. npx cap add ios
+5. npx cap sync
+6. npx cap open android
+7. npx cap open ios
+
+Do not assume the production API is localhost when running on a physical mobile device.
+
+Document that the mobile application must use a reachable HTTPS API URL in production.
+
+
+IMPORTANT MOBILE NETWORKING
+----------------------------
+
+Do not assume:
+
+http://localhost:5000
+
+will work from an Android/iOS device.
+
+On a physical device, localhost refers to the device itself.
+
+Development should support using the developer machine's LAN IP where appropriate.
+
+Production should use HTTPS.
+
+
+PROJECT STRUCTURE
+-----------------
+
+Use a clean structure similar to:
+
+src/
+    components/
+        ParkingSlotCard.tsx
+        ParkingSummary.tsx
+        ConnectionStatus.tsx
+        ParkingFilter.tsx
+        AppHeader.tsx
+        BottomNavigation.tsx
+
+    pages/
+        DashboardPage.tsx
+        ParkingSlotDetailsPage.tsx
+        SettingsPage.tsx
+
+    services/
+        parkingApi.ts
+        signalRService.ts
+
+    context/
+        ParkingContext.tsx
+
+    models/
+        parking.ts
+
+    hooks/
+        useParking.ts
+        useSignalR.ts
+
+    utils/
+        dateUtils.ts
+
+    App.tsx
+    main.tsx
+    index.css
+
+
+DATA MODEL
+----------
+
+Use TypeScript interfaces matching the backend.
+
+Example:
+
+export interface ParkingSlotState {
+    slotId: number;
+    deviceId: string;
+    distanceCm: number;
+    isOccupied: boolean;
+    lastUpdatedUtc: string;
+    lastSeenUtc: string;
+    deviceStatus: string;
+}
+
+
+SIGNALR EVENT MODEL
+-------------------
+
+The ParkingSlotUpdated event should use the same model:
+
+ParkingSlotUpdated(
+    parkingSlotState
+)
+
+
+PERFORMANCE
+-----------
+
+The application may eventually display hundreds of parking slots.
+
+Avoid unnecessary React re-renders.
+
+Use appropriate memoization where useful.
+
+Do not optimize prematurely.
+
+For the first version, prioritize clean architecture and correctness.
+
+
+TESTING
+-------
+
+Add tests for:
+
+- Parking slot rendering
+- Available status
+- Occupied status
+- Offline status
+- Filtering
+- Search
+- SignalR event updates
+- Connection state changes
+- API loading state
+- API error state
+
+
+MOCK DEVELOPMENT MODE
+---------------------
+
+For frontend development only, optionally provide a mock data mode that can be enabled through environment configuration.
+
+Example:
+
+VITE_USE_MOCK_DATA=true
+
+When false:
+
+Use the real ASP.NET Core API.
+
+When true:
+
+Use mock parking slot data.
+
+Make it obvious in the UI when mock mode is active.
+
+Do not let mock mode affect production builds.
+
+
+NO SQL SERVER
+-------------
+
+The frontend must not communicate directly with SQL Server.
+
+All communication must go through the ASP.NET Core API.
+
+The frontend should only know about:
+
+REST API
+SignalR
+
+
+FUTURE FEATURES
+---------------
+
+Design the application so the following can be added later without major restructuring:
+
+- User authentication
+- Admin users
+- Multiple parking locations
+- Parking history
+- Parking sessions
+- Parking duration
+- Reservations
+- Vehicle registration
+- Parking fees
+- Payment integration
+- Notifications
+- Push notifications
+- Analytics
+- Reports
+- Device management
+- Sensor health monitoring
+- Multiple parking lots
+
+
+FIRST VERSION SCOPE
+-------------------
+
+Do NOT implement all future features.
+
+The first version must focus on:
+
+1. Dashboard
+2. Parking slot cards
+3. Available/occupied/offline status
+4. REST API integration
+5. SignalR real-time updates
+6. Search
+7. Filtering
+8. Slot details
+9. Responsive mobile/desktop UI
+10. Capacitor configuration
+11. Light/dark theme
+12. Connection/reconnection handling
+
+
+ACCEPTANCE CRITERIA
+-------------------
+
+The application is considered complete when:
+
+1. npm install works.
+
+2. npm run build works.
+
+3. The application can connect to the ASP.NET Core API.
+
+4. GET /api/parking/slots populates the dashboard.
+
+5. SignalR connects to /hubs/parking.
+
+6. ParkingSlotUpdated updates the correct slot without page refresh.
+
+7. If Slot 1 changes from Available to Occupied, the UI immediately reflects it.
+
+8. If Slot 1 changes from Occupied to Available, the UI immediately reflects it.
+
+9. If SignalR disconnects, the UI indicates the disconnected/reconnecting state.
+
+10. When SignalR reconnects, the application synchronizes state using GET /api/parking/slots.
+
+11. Offline sensors are clearly displayed as Offline rather than Available.
+
+12. The application works on mobile screen sizes.
+
+13. The application works on desktop browsers.
+
+14. Capacitor Android configuration is included.
+
+15. Capacitor iOS configuration is included.
+
+16. No SQL Server or direct database access exists in the frontend.
+
+17. No hard-coded production API URL exists.
+
+18. No secrets are stored in frontend source code.
+
+19. The code is organized into reusable components/services.
+
+20. Provide complete instructions for:
+    - local development
+    - API configuration
+    - SignalR configuration
+    - Android build
+    - iOS build
+    - production deployment
+
+
+IMPORTANT:
+----------
+
+Before writing code, inspect the requirements and create a concise implementation plan.
+
+Then implement the application.
+
+Do not create unnecessary features outside the first-version scope.
+
+Prefer simple, maintainable solutions over over-engineering.
+
+The final output should include:
+- Project structure
+- Installation commands
+- Required dependencies
+- Environment variables
+- Complete implementation
+- API integration details
+- SignalR integration details
+- Capacitor setup
+- Android build instructions
+- iOS build instructions
+- Testing instructions
+- Production deployment notes

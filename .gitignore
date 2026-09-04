@@ -1,0 +1,31 @@
+# .NET build output
+**/bin/
+**/obj/
+
+# Node dependencies and build output
+**/node_modules/
+**/dist/
+
+# Capacitor native projects generated locally
+**/android/
+**/ios/
+
+# Local environment files and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# IDE and editor files
+.vs/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.user
+*.suo
+.DS_Store
+
+# Test and coverage output
+**/TestResults/
+coverage/
+.nyc_output/
