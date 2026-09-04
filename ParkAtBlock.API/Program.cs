@@ -37,6 +37,7 @@ app.UseHttpsRedirection();
 
 app.UseCors("Dashboard");
 
+app.MapGet("/health", () => Results.Ok(new { status = "Healthy" }));
 app.MapControllers();
 app.MapHub<ParkingHub>("/hubs/parking");
 

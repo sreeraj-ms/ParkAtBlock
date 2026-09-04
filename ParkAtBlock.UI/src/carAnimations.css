@@ -1,0 +1,158 @@
+.parking-layout {
+  grid-template-rows: repeat(var(--layout-rows), 92px);
+}
+
+.layout-bay {
+  min-height: 92px;
+}
+
+.layout-bay .bay-car {
+  transform-origin: center;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  transform: translate(-50%, -50%);
+}
+
+.status-available .bay-car {
+  opacity: 0;
+}
+
+.status-unassigned .bay-car {
+  opacity: .25;
+}
+
+.motion-arriving .bay-car {
+  animation-duration: .9s;
+  animation-timing-function: cubic-bezier(.18, .82, .25, 1);
+  animation-fill-mode: both;
+}
+
+.motion-leaving .bay-car {
+  animation-duration: .85s;
+  animation-timing-function: cubic-bezier(.55, .05, .8, .35);
+  animation-fill-mode: both;
+}
+
+.bay-left.motion-arriving .bay-car {
+  animation-name: car-park-from-left;
+}
+
+.bay-right.motion-arriving .bay-car {
+  animation-name: car-park-from-right;
+}
+
+.bay-left.motion-leaving .bay-car {
+  animation-name: car-leave-to-left;
+}
+
+.bay-right.motion-leaving .bay-car {
+  animation-name: car-leave-to-right;
+}
+
+.motion-arriving .bay-car {
+  animation-name: car-park-from-left;
+}
+
+.motion-leaving .bay-car {
+  animation-name: car-leave-to-right;
+}
+
+@keyframes car-park-from-left {
+  0% {
+    opacity: 0;
+    left: calc(50% - 110px);
+    transform: translate(-50%, -50%) scale(.72);
+  }
+  65% {
+    opacity: 1;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1.04);
+  }
+  82% {
+    left: 50%;
+    transform: translate(-50%, -50%) scale(.98);
+  }
+  100% {
+    opacity: 1;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes car-park-from-right {
+  0% {
+    opacity: 0;
+    left: calc(50% + 110px);
+    transform: translate(-50%, -50%) scale(.72);
+  }
+  65% {
+    opacity: 1;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1.04);
+  }
+  82% {
+    left: 50%;
+    transform: translate(-50%, -50%) scale(.98);
+  }
+  100% {
+    opacity: 1;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes car-leave-to-left {
+  0% {
+    opacity: 1;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  25% {
+    opacity: 1;
+    left: calc(50% - 10px);
+    transform: translate(-50%, -50%) scale(.96);
+  }
+  100% {
+    opacity: 0;
+    left: calc(50% - 110px);
+    transform: translate(-50%, -50%) scale(.72);
+  }
+}
+
+@keyframes car-leave-to-right {
+  0% {
+    opacity: 1;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  25% {
+    opacity: 1;
+    left: calc(50% + 10px);
+    transform: translate(-50%, -50%) scale(.96);
+  }
+  100% {
+    opacity: 0;
+    left: calc(50% + 110px);
+    transform: translate(-50%, -50%) scale(.72);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-arriving .bay-car,
+  .motion-leaving .bay-car {
+    animation: none;
+  }
+
+  .status-occupied .bay-car {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+
+  .status-available .bay-car {
+    opacity: 0;
+  }
+}

@@ -42,7 +42,17 @@ export function ParkingProvider({ children }: { children: ReactNode }) {
       () => void loadSlots(),
     )
     void signalR.start()
-    return () => { void signalR.stop() }
+    const handleApiUrlChanged = () => {
+      void signalR.stop().then(() => {
+        void loadSlots()
+        void signalR.start()
+      })
+    }
+    window.addEventListener('park-api-url-changed', handleApiUrlChanged)
+    return () => {
+      window.removeEventListener('park-api-url-changed', handleApiUrlChanged)
+      void signalR.stop()
+    }
   }, [])
 
   const value = useMemo(() => ({ slots, connectionStatus, loading, error, loadSlots }), [slots, connectionStatus, loading, error])

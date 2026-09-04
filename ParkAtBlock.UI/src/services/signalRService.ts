@@ -1,6 +1,6 @@
 import { HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr'
 import type { ConnectionStatus, ParkingSlotState } from '../models/parking'
-import { apiBaseUrl } from './parkingApi'
+import { getApiBaseUrl } from './parkingApi'
 
 export function createSignalRService(
   onSlotUpdated: (slot: ParkingSlotState) => void,
@@ -8,7 +8,7 @@ export function createSignalRService(
   onReconnected: () => void,
 ) {
   const connection = new HubConnectionBuilder()
-    .withUrl(`${apiBaseUrl}/hubs/parking`)
+    .withUrl(`${getApiBaseUrl()}/hubs/parking`)
     .withAutomaticReconnect([0, 2000, 5000, 10000])
     .configureLogging(LogLevel.Warning)
     .build()
