@@ -29,3 +29,5 @@
 **/TestResults/
 coverage/
 .nyc_output/
+.vercel
+.env*

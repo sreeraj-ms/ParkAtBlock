@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { ConnectionStatus, ParkingSlotState } from '../models/parking'
 import { parkingApi } from '../services/parkingApi'
+import { notifyParkingAvailable } from '../services/notificationService'
 import { createSignalRService } from '../services/signalRService'
 
 interface ParkingContextValue {
@@ -35,6 +36,10 @@ export function ParkingProvider({ children }: { children: ReactNode }) {
     void loadSlots()
     const signalR = createSignalRService(
       (updatedSlot) => setSlots((current) => {
+        const previousSlot = current.find((slot) => slot.slotId === updatedSlot.slotId)
+        if (previousSlot?.isOccupied && !updatedSlot.isOccupied) {
+          void notifyParkingAvailable(updatedSlot.slotId)
+        }
         const exists = current.some((slot) => slot.slotId === updatedSlot.slotId)
         return exists ? current.map((slot) => slot.slotId === updatedSlot.slotId ? updatedSlot : slot) : [...current, updatedSlot]
       }),

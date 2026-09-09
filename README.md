@@ -57,6 +57,26 @@ Connect a dashboard client to `/hubs/parking` and listen for `ParkingSlotUpdated
 
 Configure explicit dashboard origins in deployment configuration. The service marks a device offline when its last event is older than the configured timeout, evaluated when slot status is read. No heartbeat endpoint is needed for this first version.
 
+## Deploy the API to Vercel
+
+Vercel does not provide an official ASP.NET Core runtime. This API includes `ParkAtBlock.API/Dockerfile.vercel`, which deploys it as a Vercel container image. Create a separate Vercel project with `ParkAtBlock.API` as its Root Directory, then deploy from that directory:
+
+```sh
+cd ParkAtBlock.API
+npx vercel link
+npx vercel --prod
+```
+
+Set these production environment variables in the API Vercel project:
+
+- `ParkingSettings__AllowedOrigins__0`: the deployed UI origin, for example `https://your-ui.vercel.app`
+- `ParkingSettings__OccupiedDistanceThresholdCm`: optional occupancy threshold, default `50`
+- `ParkingSettings__DeviceOfflineTimeoutSeconds`: optional offline timeout, default `30`
+
+After deployment, set the UI's `VITE_API_BASE_URL` to the API deployment URL and redeploy the UI. The API deployment URL must be HTTPS because the dashboard also opens a SignalR connection.
+
+The current repository uses in-memory parking state. A Vercel container can scale down or create multiple instances, so this is appropriate for a single-instance demo or development deployment only. Shared storage and a SignalR backplane are needed for durable multi-instance production behavior.
+
 ## Test
 
 ```sh

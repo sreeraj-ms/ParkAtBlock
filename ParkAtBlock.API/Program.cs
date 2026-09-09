@@ -33,11 +33,13 @@ if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("Swa
         options.SwaggerEndpoint("/openapi/v1.json", "ParkAtBlock API v1"));
 }
 
-app.UseHttpsRedirection();
+if (!builder.Configuration.GetValue<bool>("Hosting:BehindTlsProxy"))
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseCors("Dashboard");
 
-app.MapGet("/health", () => Results.Ok(new { status = "Healthy" }));
 app.MapControllers();
 app.MapHub<ParkingHub>("/hubs/parking");
 
