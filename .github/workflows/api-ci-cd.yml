@@ -46,7 +46,8 @@ jobs:
         run: dotnet publish ParkAtBlock.API/ParkAtBlock.csproj --configuration Release --no-restore --output publish/api
 
       - name: Package API
-        run: zip -r api-publish.zip publish/api
+        working-directory: publish/api
+        run: zip -r ../../api-publish.zip .
 
       - name: Upload API package
         uses: actions/upload-artifact@v4
