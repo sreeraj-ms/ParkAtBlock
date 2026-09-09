@@ -114,4 +114,4 @@ jobs:
             --clean true
 
       - name: Show UI URL
-        run: 'echo "UI URL: https://${{ vars.UI_AZURE_WEBAPP_NAME || ''parkease-ui-dashboard'' }}.azurewebsites.net"'
+        run: echo "UI URL: https://${{ vars.UI_AZURE_WEBAPP_NAME || 'parkease-ui-dashboard' }}.azurewebsites.net"
