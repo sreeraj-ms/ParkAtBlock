@@ -1,0 +1,82 @@
+name: UI CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ParkAtBlock.UI/**'
+      - '.github/workflows/ui.ci-cd.yml'
+  pull_request:
+    paths:
+      - 'ParkAtBlock.UI/**'
+      - '.github/workflows/ui.ci-cd.yml'
+
+concurrency:
+  group: ui-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20.x'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and test UI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ParkAtBlock.UI
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ParkAtBlock.UI/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build production UI
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+
+      - name: Upload UI build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-dist
+          path: ParkAtBlock.UI/dist
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Publish UI release artifact
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+    steps:
+      - name: Download UI build
+        uses: actions/download-artifact@v4
+        with:
+          name: ui-dist
+          path: dist
+
+      - name: Publish production UI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-release-${{ github.sha }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 30

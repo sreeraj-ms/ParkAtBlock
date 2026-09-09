@@ -1,0 +1,84 @@
+name: API CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ParkAtBlock.API/**'
+      - 'ParkAtBlock.API.Tests/**'
+      - '.github/workflows/api-ci-cd.yml'
+  pull_request:
+    paths:
+      - 'ParkAtBlock.API/**'
+      - 'ParkAtBlock.API.Tests/**'
+      - '.github/workflows/api-ci-cd.yml'
+
+concurrency:
+  group: api-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and test API
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ParkAtBlock.API.Tests/ParkAtBlock.Tests.csproj
+
+      - name: Build API and tests
+        run: dotnet build ParkAtBlock.API.Tests/ParkAtBlock.Tests.csproj --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test ParkAtBlock.API.Tests/ParkAtBlock.Tests.csproj --configuration Release --no-build --logger trx --results-directory TestResults
+
+      - name: Publish API
+        run: dotnet publish ParkAtBlock.API/ParkAtBlock.csproj --configuration Release --no-restore --output publish/api
+
+      - name: Package API
+        run: zip -r api-publish.zip publish/api
+
+      - name: Upload API package
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-package
+          path: api-publish.zip
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Release API to Azure App Service
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Download API package
+        uses: actions/download-artifact@v4
+        with:
+          name: api-package
+
+      - name: Log in to Azure with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy API to App Service
+        uses: azure/cli@v2
+        with:
+          inlineScript: az webapp deploy --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" --name "${{ vars.AZURE_WEBAPP_NAME }}" --src-path api-publish.zip --type zip --clean true
