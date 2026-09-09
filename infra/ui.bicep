@@ -20,7 +20,7 @@ resource resourceGroup 'Microsoft.Resources/resourceGroups@2024-03-01' = {
 resource appServicePlan 'Microsoft.Web/serverfarms@2024-11-01' = {
   name: '${webAppName}-plan'
   location: location
-  resourceGroup: resourceGroup
+  scope: resourceGroup
   kind: 'app'
   sku: {
     name: skuName
@@ -34,7 +34,7 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2024-11-01' = {
 resource webApp 'Microsoft.Web/sites@2024-11-01' = {
   name: webAppName
   location: location
-  resourceGroup: resourceGroup
+  scope: resourceGroup
   kind: 'app'
   properties: {
     serverFarmId: appServicePlan.id
