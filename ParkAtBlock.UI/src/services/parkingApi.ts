@@ -1,7 +1,7 @@
 import type { ParkingSlotState } from '../models/parking'
 
 const apiUrlStorageKey = 'park-api-base-url'
-const defaultApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://192.168.29.52:5175'
+const defaultApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://park-at-block-api.vercel.app'
 
 export interface PushSubscriptionResponse {
   publicKey: string | null
@@ -13,8 +13,7 @@ function normalizeApiBaseUrl(value: string) {
 
 export function getApiBaseUrl() {
   const savedUrl = localStorage.getItem(apiUrlStorageKey)
-  if (!savedUrl || savedUrl === 'http://localhost:5175') return normalizeApiBaseUrl(defaultApiBaseUrl)
-  return normalizeApiBaseUrl(savedUrl)
+  return normalizeApiBaseUrl(savedUrl || defaultApiBaseUrl)
 }
 
 export function setApiBaseUrl(value: string) {
