@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - 'ParkAtBlock.UI/**'
+      - 'infra/ui.bicep'
       - '.github/workflows/ui.ci-cd.yml'
   pull_request:
     paths:
       - 'ParkAtBlock.UI/**'
+      - 'infra/ui.bicep'
       - '.github/workflows/ui.ci-cd.yml'
 
 concurrency:
@@ -59,24 +61,57 @@ jobs:
           retention-days: 7
 
   release:
-    name: Publish UI release artifact
+    name: Provision and release UI to Azure App Service
     needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
     permissions:
       contents: read
+      id-token: write
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
       - name: Download UI build
         uses: actions/download-artifact@v4
         with:
           name: ui-dist
           path: dist
 
-      - name: Publish production UI artifact
-        uses: actions/upload-artifact@v4
+      - name: Package UI
+        working-directory: dist
+        run: zip -r ../ui-publish.zip .
+
+      - name: Log in to Azure with OIDC
+        uses: azure/login@v2
         with:
-          name: ui-release-${{ github.sha }}
-          path: dist
-          if-no-files-found: error
-          retention-days: 30
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Provision UI resource group and App Service
+        uses: azure/cli@v2
+        with:
+          inlineScript: >-
+            az deployment sub create
+            --location "${{ vars.UI_AZURE_LOCATION || 'westus3' }}"
+            --template-file infra/ui.bicep
+            --parameters
+            resourceGroupName="${{ vars.UI_AZURE_RESOURCE_GROUP || 'parkease-ui' }}"
+            webAppName="${{ vars.UI_AZURE_WEBAPP_NAME || 'parkease-ui-dashboard' }}"
+            location="${{ vars.UI_AZURE_LOCATION || 'westus3' }}"
+
+      - name: Deploy UI to App Service
+        uses: azure/cli@v2
+        with:
+          inlineScript: >-
+            az webapp deploy
+            --resource-group "${{ vars.UI_AZURE_RESOURCE_GROUP || 'parkease-ui' }}"
+            --name "${{ vars.UI_AZURE_WEBAPP_NAME || 'parkease-ui-dashboard' }}"
+            --src-path ui-publish.zip
+            --type zip
+            --clean true
+
+      - name: Show UI URL
+        run: echo "UI URL: https://${{ vars.UI_AZURE_WEBAPP_NAME || 'parkease-ui-dashboard' }}.azurewebsites.net"
