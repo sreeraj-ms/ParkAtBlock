@@ -107,8 +107,18 @@ public sealed class ParkingServiceTests
         return new ParkingService(
             new InMemoryParkingStateRepository(),
             hubContext,
+            new NoopPushNotificationService(),
             Options.Create(new ParkingSettings()),
             NullLogger<ParkingService>.Instance);
+    }
+
+    private sealed class NoopPushNotificationService : IPushNotificationService
+    {
+        public string? PublicKey => null;
+
+        public void AddSubscription(PushSubscriptionRequest request) { }
+
+        public Task NotifyParkingAvailableAsync(int slotId, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private sealed class TestHubContext(IHubClients clients) : IHubContext<ParkingHub>

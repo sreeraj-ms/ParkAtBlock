@@ -10,6 +10,7 @@ namespace ParkAtBlock.Services;
 public sealed class ParkingService(
     IParkingStateRepository repository,
     IHubContext<ParkingHub> hubContext,
+    IPushNotificationService pushNotificationService,
     IOptions<ParkingSettings> options,
     ILogger<ParkingService> logger) : IParkingService
 {
@@ -37,6 +38,10 @@ public sealed class ParkingService(
         {
             logger.LogInformation("Parking slot {SlotId} changed to {Status}", state.SlotId, state.IsOccupied ? "Occupied" : "Available");
             await hubContext.Clients.All.SendAsync("ParkingSlotUpdated", state, cancellationToken);
+            if (previous?.IsOccupied == true && !state.IsOccupied)
+            {
+                await pushNotificationService.NotifyParkingAvailableAsync(state.SlotId, cancellationToken);
+            }
         }
 
         return state;

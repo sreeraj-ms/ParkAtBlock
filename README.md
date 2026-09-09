@@ -72,8 +72,21 @@ Set these production environment variables in the API Vercel project:
 - `ParkingSettings__AllowedOrigins__0`: the deployed UI origin, for example `https://your-ui.vercel.app`
 - `ParkingSettings__OccupiedDistanceThresholdCm`: optional occupancy threshold, default `50`
 - `ParkingSettings__DeviceOfflineTimeoutSeconds`: optional offline timeout, default `30`
+- `WebPush__PublicKey`: VAPID application server public key
+- `WebPush__PrivateKey`: VAPID application server private key
+- `WebPush__Subject`: administrator contact, for example `mailto:admin@example.com`
 
 After deployment, set the UI's `VITE_API_BASE_URL` to the API deployment URL and redeploy the UI. The API deployment URL must be HTTPS because the dashboard also opens a SignalR connection.
+
+### Push notifications
+
+Generate a stable VAPID key pair once and store both keys as API deployment secrets:
+
+```sh
+npx web-push generate-vapid-keys
+```
+
+Open the dashboard over HTTPS, install it to the device home screen on iOS, then use **Settings > Parking notifications > Enable**. The button sends a test notification and registers the browser subscription. The API sends a background notification when a slot changes from occupied to available. Do not regenerate the VAPID keys after subscriptions have been created, or users must enable notifications again.
 
 The current repository uses in-memory parking state. A Vercel container can scale down or create multiple instances, so this is appropriate for a single-instance demo or development deployment only. Shared storage and a SignalR backplane are needed for durable multi-instance production behavior.
 

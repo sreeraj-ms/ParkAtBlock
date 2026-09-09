@@ -10,8 +10,10 @@ builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddOpenApi();
 builder.Services.Configure<ParkingSettings>(builder.Configuration.GetSection(ParkingSettings.SectionName));
+builder.Services.Configure<WebPushSettings>(builder.Configuration.GetSection(WebPushSettings.SectionName));
 builder.Services.AddSingleton<IParkingStateRepository, InMemoryParkingStateRepository>();
 builder.Services.AddSingleton<IParkingService, ParkingService>();
+builder.Services.AddSingleton<IPushNotificationService, PushNotificationService>();
 builder.Services.AddSignalR();
 
 var allowedOrigins = builder.Configuration.GetSection("ParkingSettings:AllowedOrigins").Get<string[]>() ?? [];
