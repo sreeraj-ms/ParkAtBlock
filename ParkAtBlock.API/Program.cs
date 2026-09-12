@@ -11,7 +11,7 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 builder.Services.AddOpenApi();
 builder.Services.Configure<ParkingSettings>(builder.Configuration.GetSection(ParkingSettings.SectionName));
 builder.Services.Configure<WebPushSettings>(builder.Configuration.GetSection(WebPushSettings.SectionName));
-builder.Services.AddSingleton<IParkingStateRepository, InMemoryParkingStateRepository>();
+builder.Services.AddSingleton<IParkingStateRepository, FileSystemParkingStateRepository>();
 builder.Services.AddSingleton<IParkingService, ParkingService>();
 builder.Services.AddSingleton<IPushNotificationService, PushNotificationService>();
 builder.Services.AddSignalR();
