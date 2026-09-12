@@ -8,8 +8,8 @@ export function ParkingSummary({ slots }: { slots: ParkingSlotState[] }) {
   const stats = [
     { label: 'Total slots', value: slots.length, icon: LayoutGrid, tone: 'neutral' },
     { label: 'Available', value: available, icon: CircleParking, tone: 'green' },
-    { label: 'Occupied', value: occupied, icon: Car, tone: 'orange' },
-    { label: 'Offline', value: offline, icon: Radio, tone: 'red' },
+    { label: 'Occupied', value: occupied, icon: Car, tone: 'red' },
+    { label: 'Offline', value: offline, icon: Radio, tone: 'gray' },
   ]
   return <div className="summary-grid">{stats.map(({ label, value, icon: Icon, tone }) => <div className={`summary-card tone-${tone}`} key={label}><Icon size={19} aria-hidden="true" /><div><strong>{value}</strong><span>{label}</span></div></div>)}</div>
 }

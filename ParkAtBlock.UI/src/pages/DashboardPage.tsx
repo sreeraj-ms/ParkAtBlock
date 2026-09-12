@@ -1,4 +1,10 @@
-import { Car, Search, SlidersHorizontal } from "lucide-react";
+import {
+  CarFront,
+  CircleParking,
+  Search,
+  SlidersHorizontal,
+  WifiOff,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ParkingSlotCard } from "../components/ParkingSlotCard";
 import { ParkingSummary } from "../components/ParkingSummary";
@@ -263,15 +269,15 @@ export function DashboardPage() {
               const matchesFilter = visibleSlotIds.has(bay.slotId);
               const status = slotStatus(slot);
               const previousStatus = previousStatuses.current[bay.slotId];
-              const motion =
-                previousStatus === "available" && status === "occupied"
-                  ? "motion-arriving"
-                  : previousStatus === "occupied" && status === "available"
-                    ? "motion-leaving"
-                    : "";
+              const isOccupiedToAvailable =
+                previousStatus === "occupied" && status === "available";
+              const isOfflineToAvailable =
+                previousStatus === "offline" && status === "available";
+              const isAvailableToOccupied =
+                previousStatus === "available" && status === "occupied";
               return (
                 <a
-                  className={`layout-bay bay-${bay.side} status-${status} ${motion} ${matchesFilter || (filter === "All" && !search) ? "" : "is-filtered"}`}
+                  className={`layout-bay bay-${bay.side} status-${status} ${isOccupiedToAvailable ? "transition-occupied-to-available" : ""} ${isOfflineToAvailable ? "transition-offline-to-available" : ""} ${isAvailableToOccupied ? "transition-available-to-occupied" : ""} ${matchesFilter || (filter === "All" && !search) ? "" : "is-filtered"}`}
                   href={`/parking/${bay.slotId}`}
                   key={`${building.id}-${bay.slotId}`}
                   style={{ gridColumn: bay.column, gridRow: bay.row }}
@@ -284,7 +290,43 @@ export function DashboardPage() {
                   <span className="bay-number">
                     {String(bay.slotId).padStart(2, "0")}
                   </span>
-                  <Car className="bay-car" size={50} aria-hidden="true" />
+                  {isOccupiedToAvailable || isOfflineToAvailable ? (
+                    <>
+                      {isOccupiedToAvailable ? (
+                        <CarFront
+                          className="bay-car bay-car-exit-right"
+                          size={50}
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <WifiOff
+                          className="bay-car bay-car-exit-right"
+                          size={50}
+                          aria-hidden="true"
+                        />
+                      )}
+                      <CircleParking className="bay-car bay-car-enter-left" size={50} aria-hidden="true" />
+                    </>
+                  ) : isAvailableToOccupied ? (
+                    <>
+                      <CircleParking
+                        className="bay-car bay-car-exit-left"
+                        size={50}
+                        aria-hidden="true"
+                      />
+                      <CarFront
+                        className="bay-car bay-car-enter-right"
+                        size={50}
+                        aria-hidden="true"
+                      />
+                    </>
+                  ) : status === "offline" ? (
+                    <WifiOff className="bay-car" size={50} aria-hidden="true" />
+                  ) : status === "available" ? (
+                    <CircleParking className="bay-car" size={50} aria-hidden="true" />
+                  ) : (
+                    <CarFront className="bay-car" size={50} aria-hidden="true" />
+                  )}
                   <span className="bay-state">
                     <i />
                     {statusLabel(status)}

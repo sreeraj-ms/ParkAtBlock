@@ -1,25 +1,65 @@
 .parking-layout {
-  grid-template-rows: repeat(var(--layout-rows), 92px);
+  grid-template-rows: repeat(var(--layout-rows), 78px);
 }
 
 .layout-bay {
-  min-height: 92px;
+  min-height: 78px;
+  --bay-status-height: 12px;
 }
 
 .layout-bay .bay-car {
   transform-origin: center;
   position: absolute;
+  z-index: 0;
   left: 50%;
-  top: 50%;
-  width: 40px;
-  height: 40px;
+  top: calc((100% - var(--bay-status-height)) / 2 - 5px);
+  width: 50px;
+  height: 50px;
   margin: 0;
   transform: translate(-50%, -50%);
 }
 
-.status-available .bay-car {
-  opacity: 0;
+.layout-bay .bay-state {
+  position: absolute;
+  z-index: 2;
+  left: 4px;
+  right: 4px;
+  bottom: 2px;
+  height: var(--bay-status-height);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1px 3px;
+  border-radius: 3px;
+  font-size: 8px;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
+.layout-bay.status-available .bay-state {
+  background: var(--green-bg);
+}
+
+.layout-bay.status-occupied .bay-state {
+  background: var(--red-bg);
+}
+
+.layout-bay.status-offline .bay-state {
+  background: var(--gray-bg);
+}
+
+.layout-bay.status-unassigned .bay-state {
+  background: rgba(116, 128, 121, .14);
+}
+
+.layout-bay.status-available .bay-car {
+  opacity: 1;
+  color: var(--green);
+}
+
+
 
 .status-unassigned .bay-car {
   opacity: .25;
@@ -35,6 +75,30 @@
   animation-duration: .85s;
   animation-timing-function: cubic-bezier(.55, .05, .8, .35);
   animation-fill-mode: both;
+}
+
+.transition-occupied-to-available .bay-car-exit-right {
+  animation: car-leave-to-right .85s cubic-bezier(.55, .05, .8, .35) both;
+}
+
+.transition-offline-to-available .bay-car-exit-right {
+  animation: car-leave-to-right .85s cubic-bezier(.55, .05, .8, .35) both;
+}
+
+.transition-occupied-to-available .bay-car-enter-left {
+  animation: car-park-from-left .9s cubic-bezier(.18, .82, .25, 1) both;
+}
+
+.transition-offline-to-available .bay-car-enter-left {
+  animation: car-park-from-left .9s cubic-bezier(.18, .82, .25, 1) both;
+}
+
+.transition-available-to-occupied .bay-car-exit-left {
+  animation: car-leave-to-left .85s cubic-bezier(.55, .05, .8, .35) both;
+}
+
+.transition-available-to-occupied .bay-car-enter-right {
+  animation: car-park-from-right .9s cubic-bezier(.18, .82, .25, 1) both;
 }
 
 .bay-left.motion-arriving .bay-car {
@@ -147,12 +211,47 @@
     animation: none;
   }
 
-  .status-occupied .bay-car {
+  .transition-occupied-to-available .bay-car-exit-right,
+  .transition-occupied-to-available .bay-car-enter-left,
+  .transition-offline-to-available .bay-car-exit-right,
+  .transition-offline-to-available .bay-car-enter-left,
+  .transition-available-to-occupied .bay-car-exit-left,
+  .transition-available-to-occupied .bay-car-enter-right {
+    animation: none;
+  }
+
+  .transition-occupied-to-available .bay-car-exit-right {
+    opacity: 0;
+  }
+
+  .transition-occupied-to-available .bay-car-enter-left {
     opacity: 1;
+    left: 50%;
     transform: translate(-50%, -50%);
   }
 
-  .status-available .bay-car {
+  .transition-offline-to-available .bay-car-exit-right {
     opacity: 0;
+  }
+
+  .transition-offline-to-available .bay-car-enter-left {
+    opacity: 1;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .transition-available-to-occupied .bay-car-exit-left {
+    opacity: 0;
+  }
+
+  .transition-available-to-occupied .bay-car-enter-right {
+    opacity: 1;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .status-occupied .bay-car {
+    opacity: 1;
+    transform: translate(-50%, -50%);
   }
 }
