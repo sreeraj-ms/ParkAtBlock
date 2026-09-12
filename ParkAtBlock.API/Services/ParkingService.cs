@@ -31,7 +31,7 @@ public sealed class ParkingService(
             now,
             DeviceStatus.Online);
 
-        var previous = repository.Upsert(state);
+        var previous = await repository.UpsertAsync(state, cancellationToken);
         logger.LogInformation("Parking event received from {DeviceId} for slot {SlotId}", state.DeviceId, state.SlotId);
 
         if (previous is null || previous.IsOccupied != state.IsOccupied || previous.DeviceStatus != state.DeviceStatus)
@@ -47,18 +47,27 @@ public sealed class ParkingService(
         return state;
     }
 
-    public IReadOnlyCollection<ParkingSlotState> GetSlots() => UpdateOfflineStates(repository.GetAll());
+    public async Task<IReadOnlyCollection<ParkingSlotState>> GetSlotsAsync(CancellationToken cancellationToken = default) =>
+        await UpdateOfflineStatesAsync(await repository.GetAllAsync(cancellationToken), cancellationToken);
 
-    public ParkingSlotState? GetSlot(int slotId)
+    public async Task<ParkingSlotState?> GetSlotAsync(int slotId, CancellationToken cancellationToken = default)
     {
-        var state = repository.GetBySlotId(slotId);
-        return state is null ? null : UpdateOfflineState(state);
+        var state = await repository.GetBySlotIdAsync(slotId, cancellationToken);
+        return state is null ? null : await UpdateOfflineStateAsync(state, cancellationToken);
     }
 
-    private IReadOnlyCollection<ParkingSlotState> UpdateOfflineStates(IReadOnlyCollection<ParkingSlotState> states) =>
-        states.Select(UpdateOfflineState).ToArray();
+    private async Task<IReadOnlyCollection<ParkingSlotState>> UpdateOfflineStatesAsync(IReadOnlyCollection<ParkingSlotState> states, CancellationToken cancellationToken)
+    {
+        var results = new List<ParkingSlotState>(states.Count);
+        foreach (var state in states)
+        {
+            results.Add(await UpdateOfflineStateAsync(state, cancellationToken));
+        }
 
-    private ParkingSlotState UpdateOfflineState(ParkingSlotState state)
+        return results;
+    }
+
+    private async Task<ParkingSlotState> UpdateOfflineStateAsync(ParkingSlotState state, CancellationToken cancellationToken)
     {
         if (state.DeviceStatus == DeviceStatus.Offline ||
             DateTime.UtcNow - state.LastSeenUtc <= TimeSpan.FromSeconds(settings.DeviceOfflineTimeoutSeconds))
@@ -67,7 +76,7 @@ public sealed class ParkingService(
         }
 
         var offlineState = state with { DeviceStatus = DeviceStatus.Offline };
-        repository.Upsert(offlineState);
+        await repository.UpsertAsync(offlineState, cancellationToken);
         logger.LogInformation("Device {DeviceId} for slot {SlotId} went offline", state.DeviceId, state.SlotId);
         return offlineState;
     }

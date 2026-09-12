@@ -8,49 +8,66 @@ public sealed class FileSystemParkingStateRepository : IParkingStateRepository
     private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
 
     private readonly string filePath;
-    private readonly Lock syncRoot = new();
+    private readonly SemaphoreSlim syncRoot = new(1, 1);
 
     public FileSystemParkingStateRepository(string? filePath = null)
     {
         this.filePath = filePath ?? Path.Combine(AppContext.BaseDirectory, "ParkingData.json");
     }
 
-    public IReadOnlyCollection<ParkingSlotState> GetAll()
+    public async Task<IReadOnlyCollection<ParkingSlotState>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        lock (syncRoot)
+        await syncRoot.WaitAsync(cancellationToken);
+        try
         {
-            return ReadAll().Values.ToArray();
+            var states = await ReadAllAsync(cancellationToken);
+            return states.Values.ToArray();
+        }
+        finally
+        {
+            syncRoot.Release();
         }
     }
 
-    public ParkingSlotState? GetBySlotId(int slotId)
+    public async Task<ParkingSlotState?> GetBySlotIdAsync(int slotId, CancellationToken cancellationToken = default)
     {
-        lock (syncRoot)
+        await syncRoot.WaitAsync(cancellationToken);
+        try
         {
-            return ReadAll().GetValueOrDefault(slotId);
+            var states = await ReadAllAsync(cancellationToken);
+            return states.GetValueOrDefault(slotId);
+        }
+        finally
+        {
+            syncRoot.Release();
         }
     }
 
-    public ParkingSlotState? Upsert(ParkingSlotState state)
+    public async Task<ParkingSlotState?> UpsertAsync(ParkingSlotState state, CancellationToken cancellationToken = default)
     {
-        lock (syncRoot)
+        await syncRoot.WaitAsync(cancellationToken);
+        try
         {
-            var states = ReadAll();
+            var states = await ReadAllAsync(cancellationToken);
             states.TryGetValue(state.SlotId, out var previous);
             states[state.SlotId] = state;
-            WriteAll(states);
+            await WriteAllAsync(states, cancellationToken);
             return previous;
+        }
+        finally
+        {
+            syncRoot.Release();
         }
     }
 
-    private Dictionary<int, ParkingSlotState> ReadAll()
+    private async Task<Dictionary<int, ParkingSlotState>> ReadAllAsync(CancellationToken cancellationToken)
     {
         if (!File.Exists(filePath))
         {
             return [];
         }
 
-        var json = File.ReadAllText(filePath);
+        var json = await File.ReadAllTextAsync(filePath, cancellationToken);
         if (string.IsNullOrWhiteSpace(json))
         {
             return [];
@@ -60,7 +77,7 @@ public sealed class FileSystemParkingStateRepository : IParkingStateRepository
         return states?.ToDictionary(s => s.SlotId) ?? [];
     }
 
-    private void WriteAll(Dictionary<int, ParkingSlotState> states)
+    private async Task WriteAllAsync(Dictionary<int, ParkingSlotState> states, CancellationToken cancellationToken)
     {
         var directory = Path.GetDirectoryName(filePath);
         if (!string.IsNullOrEmpty(directory))
@@ -69,6 +86,12 @@ public sealed class FileSystemParkingStateRepository : IParkingStateRepository
         }
 
         var json = JsonSerializer.Serialize(states.Values.ToList(), SerializerOptions);
-        File.WriteAllText(filePath, json);
+
+        var tempFilePath = Path.Combine(
+            string.IsNullOrEmpty(directory) ? AppContext.BaseDirectory : directory,
+            $"{Path.GetFileName(filePath)}.{Guid.NewGuid():N}.tmp");
+
+        await File.WriteAllTextAsync(tempFilePath, json, cancellationToken);
+        File.Move(tempFilePath, filePath, overwrite: true);
     }
 }

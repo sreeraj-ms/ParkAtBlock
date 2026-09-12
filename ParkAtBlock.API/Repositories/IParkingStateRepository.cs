@@ -4,7 +4,7 @@ namespace ParkAtBlock.Repositories;
 
 public interface IParkingStateRepository
 {
-    IReadOnlyCollection<ParkingSlotState> GetAll();
-    ParkingSlotState? GetBySlotId(int slotId);
-    ParkingSlotState? Upsert(ParkingSlotState state);
+    Task<IReadOnlyCollection<ParkingSlotState>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<ParkingSlotState?> GetBySlotIdAsync(int slotId, CancellationToken cancellationToken = default);
+    Task<ParkingSlotState?> UpsertAsync(ParkingSlotState state, CancellationToken cancellationToken = default);
 }

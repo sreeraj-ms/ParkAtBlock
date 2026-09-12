@@ -5,6 +5,6 @@ public sealed class ParkingSettings
     public const string SectionName = "ParkingSettings";
 
     public double OccupiedDistanceThresholdCm { get; set; } = 50;
-    public int DeviceOfflineTimeoutSeconds { get; set; } = 300;
+    public int DeviceOfflineTimeoutSeconds { get; set; } = 120;
     public string[] AllowedOrigins { get; set; } = [];
 }

@@ -7,29 +7,30 @@ public sealed class InMemoryParkingStateRepository : IParkingStateRepository
     private readonly Dictionary<int, ParkingSlotState> states = [];
     private readonly Lock syncRoot = new();
 
-    public IReadOnlyCollection<ParkingSlotState> GetAll()
+    public Task<IReadOnlyCollection<ParkingSlotState>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         lock (syncRoot)
         {
-            return states.Values.ToArray();
+            IReadOnlyCollection<ParkingSlotState> result = states.Values.ToArray();
+            return Task.FromResult(result);
         }
     }
 
-    public ParkingSlotState? GetBySlotId(int slotId)
+    public Task<ParkingSlotState?> GetBySlotIdAsync(int slotId, CancellationToken cancellationToken = default)
     {
         lock (syncRoot)
         {
-            return states.GetValueOrDefault(slotId);
+            return Task.FromResult(states.GetValueOrDefault(slotId));
         }
     }
 
-    public ParkingSlotState? Upsert(ParkingSlotState state)
+    public Task<ParkingSlotState?> UpsertAsync(ParkingSlotState state, CancellationToken cancellationToken = default)
     {
         lock (syncRoot)
         {
             states.TryGetValue(state.SlotId, out var previous);
             states[state.SlotId] = state;
-            return previous;
+            return Task.FromResult(previous);
         }
     }
 }

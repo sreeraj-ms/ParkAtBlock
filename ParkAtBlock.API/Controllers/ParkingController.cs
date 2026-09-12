@@ -25,14 +25,15 @@ public sealed class ParkingController(IParkingService parkingService) : Controll
 
     [HttpGet("slots")]
     [ProducesResponseType(typeof(IReadOnlyCollection<ParkingSlotState>), StatusCodes.Status200OK)]
-    public ActionResult<IReadOnlyCollection<ParkingSlotState>> GetSlots() => Ok(parkingService.GetSlots());
+    public async Task<ActionResult<IReadOnlyCollection<ParkingSlotState>>> GetSlots(CancellationToken cancellationToken) =>
+        Ok(await parkingService.GetSlotsAsync(cancellationToken));
 
     [HttpGet("slots/{slotId:int}")]
     [ProducesResponseType(typeof(ParkingSlotState), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public ActionResult<ParkingSlotState> GetSlot(int slotId)
+    public async Task<ActionResult<ParkingSlotState>> GetSlot(int slotId, CancellationToken cancellationToken)
     {
-        var slot = parkingService.GetSlot(slotId);
+        var slot = await parkingService.GetSlotAsync(slotId, cancellationToken);
         return slot is null ? NotFound() : Ok(slot);
     }
 }

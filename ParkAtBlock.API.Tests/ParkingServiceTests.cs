@@ -54,7 +54,7 @@ public sealed class ParkingServiceTests
         await service.ProcessEventAsync(Event(1, 30, "ESP32-001"));
         await service.ProcessEventAsync(Event(2, 75, "ESP32-002"));
 
-        var states = service.GetSlots();
+        var states = await service.GetSlotsAsync();
         Assert.Equal(2, states.Count);
         Assert.Contains(states, state => state.SlotId == 1 && state.IsOccupied);
         Assert.Contains(states, state => state.SlotId == 2 && !state.IsOccupied);
@@ -70,9 +70,9 @@ public sealed class ParkingServiceTests
 
         await Task.WhenAll(updates);
 
-        var state = service.GetSlot(1);
+        var state = await service.GetSlotAsync(1);
         Assert.NotNull(state);
-        Assert.Single(service.GetSlots());
+        Assert.Single(await service.GetSlotsAsync());
     }
 
     [Theory]

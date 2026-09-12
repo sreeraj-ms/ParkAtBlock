@@ -5,6 +5,6 @@ namespace ParkAtBlock.Services;
 public interface IParkingService
 {
     Task<ParkingSlotState> ProcessEventAsync(ParkingEventRequest request, CancellationToken cancellationToken = default);
-    IReadOnlyCollection<ParkingSlotState> GetSlots();
-    ParkingSlotState? GetSlot(int slotId);
+    Task<IReadOnlyCollection<ParkingSlotState>> GetSlotsAsync(CancellationToken cancellationToken = default);
+    Task<ParkingSlotState?> GetSlotAsync(int slotId, CancellationToken cancellationToken = default);
 }
